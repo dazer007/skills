@@ -39,6 +39,63 @@ cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # openClaw
 | skills.sh | https://skills.sh |
 | clawhub.ai | https://clawhub.ai |
 
+---
+
+## 国内推送GitHub私有仓库
+
+国内直连GitHub often受限，推荐使用 [ghfast.top](https://ghfast.top/) 代理。
+
+### 拉取/克隆（公开仓库）
+
+直接在URL前加代理前缀：
+
+```bash
+# 原始URL
+git clone https://github.com/dazer007/my-skills.git
+
+# 使用代理
+git clone https://ghfast.top/https://github.com/dazer007/my-skills.git
+```
+
+### 推送私有仓库
+
+私有仓库推送需要GitHub Personal Access Token：
+
+**1. 创建Token**
+
+访问 GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+
+勾选权限：`repo`（完整仓库访问）
+
+**2. 配置推送**
+
+```bash
+# 设置remote（带token）
+git remote set-url origin https://用户名:TOKEN@ghfast.top/https://github.com/用户名/仓库名.git
+
+# 推送
+git push -u origin master
+
+# 推送完成后移除token（安全考虑）
+git remote set-url origin https://github.com/用户名/仓库名.git
+```
+
+**3. 一行命令推送**
+
+```bash
+git remote set-url origin https://dazer007:ghp_xxx@ghfast.top/https://github.com/dazer007/my-skills.git && \
+git push && \
+git remote set-url origin https://github.com/dazer007/my-skills.git
+```
+
+### 注意事项
+
+- ⚠️ Token不要提交到仓库，推送后立即移除
+- ✅ 代理支持HTTPS，不支持SSH
+- ✅ 公开仓库拉取无需token
+
+---
+
 ## Usage
 
 安装后通过斜杠命令调用：
