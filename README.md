@@ -9,7 +9,7 @@ Agent skills collection - 技能生态通用。
 | Platform | Description |
 |----------|-------------|
 | **Claude Code** | Anthropic官方CLI |
-| **openClaw** | 兼容生态任意国产龙虾：WorkBuddy、QClaw等 |
+| **OpenClaw** | 兼容生态任意国产龙虾：WorkBuddy、QClaw等 |
 
 ## Skills
 
@@ -20,13 +20,13 @@ Agent skills collection - 技能生态通用。
 ## Install
 
 ```bash
-# Claude Code / openClaw 通用安装命令
+# Claude Code / OpenClaw 通用安装命令
 npx skills add dazer007/my-skills@xjtu-doctor-scraper
 
 # 或手动克隆安装
 git clone https://github.com/dazer007/my-skills.git
 cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/   # Claude Code
-cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # openClaw
+cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # OpenClaw
 ```
 
 ### 国内用户加速
@@ -50,6 +50,11 @@ git config --global --unset url.https://ghfast.top/https://github.com/.insteadof
 git clone https://ghfast.top/https://github.com/dazer007/my-skills.git
 cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
 ```
+
+网络实在不行？灵活处理：
+
+- **手工下载ZIP**: 浏览器打开 https://ghfast.top/https://github.com/dazer007/my-skills/archive/refs/heads/master.zip ，解压后复制技能目录
+- **从国内生态复制**: 访问 skillhub.cn / clawhub.ai 搜索同名技能，直接一键安装
 
 ## Discover More Skills
 
