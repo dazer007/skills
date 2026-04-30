@@ -29,6 +29,28 @@ cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/   # Claude Code
 cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # openClaw
 ```
 
+### 国内用户加速
+
+如果 `npx skills add` 访问GitHub失败，配置git全局代理：
+
+```bash
+# 配置git全局代理（使用ghfast.top）
+git config --global url.https://ghfast.top/https://github.com/.insteadof https://github.com/
+
+# 然后正常使用npx安装
+npx skills add dazer007/my-skills@xjtu-doctor-scraper
+
+# 安装后可取消代理（可选）
+git config --global --unset url.https://ghfast.top/https://github.com/.insteadof
+```
+
+或手动克隆：
+
+```bash
+git clone https://ghfast.top/https://github.com/dazer007/my-skills.git
+cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
+```
+
 ## Discover More Skills
 
 探索更多技能生态：
