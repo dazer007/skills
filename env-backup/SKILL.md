@@ -1,13 +1,40 @@
 ---
 name: env-backup
-description: 环境变量备份与恢复工具，支持 Windows/Linux/Mac。记录环境变量变更历史，快速恢复、对比差异。
+description: 环境变量备份与恢复工具。**触发条件**：用户请求修改/切换/添加/删除环境变量（PATH、JAVA_HOME、GOPATH等）时，自动先备份再执行修改。支持 Windows/Linux/Mac。
 metadata:
   short-description: 环境变量备份恢复
+  triggers:
+    - "修改环境变量"
+    - "切换 JDK"
+    - "更改 PATH"
+    - "设置 JAVA_HOME"
+    - "添加到 PATH"
+    - "删除环境变量"
+    - "环境变量备份"
 ---
 
 # Env Backup
 
 环境变量管理工具，支持备份、恢复、对比查看。
+
+**重要：修改环境变量前自动备份，防止误操作导致环境丢失。**
+
+## Trigger
+
+以下场景**自动触发**此 skill，先备份再执行操作：
+
+| 触发词 | 操作 |
+|--------|------|
+| "修改环境变量"、"更改环境变量" | 备份 + 执行修改 |
+| "切换 JDK"、"切换 Java 版本" | 备份 + 修改 JAVA_HOME/PATH |
+| "添加到 PATH"、"删除 PATH" | 备份 + 修改 PATH |
+| "设置 JAVA_HOME"、"设置 GOPATH" | 备份 + 设置变量 |
+| "环境变量备份"、"备份环境变量" | 仅备份 |
+
+**标准工作流**：
+1. 收到修改请求 → 自动执行 `backup`
+2. 执行用户请求的环境变量修改
+3. 可选：执行 `diff` 展示变更对比
 
 ## 功能
 
@@ -104,6 +131,34 @@ Windows 分离用户变量和系统变量：
 ## Tags
 
 `environment`, `backup`, `restore`, `path`, `windows`, `linux`, `macos`
+
+## Hooks 配置 (可选自动化)
+
+如需在每次修改环境变量时自动备份，可配置 Claude Code hook：
+
+在 `~/.claude/settings.json` 中添加：
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -qE '(SetEnvironmentVariable|JAVA_HOME|PATH)' && ~/.claude/skills/env-backup/scripts/env-backup.sh backup --note 'auto-backup' 2>/dev/null || true",
+            "timeout": 10,
+            "statusMessage": "Auto-backing up environment variables..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**注意**：hook 配置后需要重启 Claude Code 或执行 `/hooks` 重新加载。
 
 ## Compatibility
 
