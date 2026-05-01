@@ -18,6 +18,7 @@ Agent skills collection - 技能生态通用。
 | Skill | Description |
 |-------|-------------|
 | [xjtu-doctor-scraper](./xjtu-doctor-scraper) | 爬取西安交通大学第一附属医院官网医生列表 |
+| [env-backup](./env-backup) | 环境变量备份与恢复工具，支持 Windows/Linux/Mac，记录变更历史、快速恢复、对比差异 |
 
 ## Installed Skills
 
