@@ -23,11 +23,11 @@ Agent skills collection - 技能生态通用。
 
 本环境已安装的技能：
 
-| Skill | Description | Install |
-|-------|-------------|---------|
-| `github` | 使用 `gh` CLI 与 GitHub 交互，处理 PR、CI、Issues 等 | [skillhub.cn](https://skillhub.cn/skills/github) / [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) / [clawhub.ai](https://clawhub.ai/steipete/github) / [GitHub](https://github.com/github/awesome-copilot/tree/main/skills/gh-cli) |
-| `bilibili-cli` | B站CLI工具：视频详情、字幕、搜索、热门、评论、互动等 | [skills.sh](https://skills.sh/jackwener/bilibili-cli/bilibili-cli) / [GitHub](https://github.com/public-clis/bilibili-cli) / [ModelScope](https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli) |
-| `bilibili-analyzer` | B站视频深度分析：下载视频拆帧、AI分析生成专题文档或实操教程 | [skills.sh](https://skills.sh/aidotnet/moyucode/bilibili-analyzer) / [ModelScope](https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer) / [GitHub](https://github.com/AIDotNet/MoYuCode/blob/main/skills/tools/bilibili-analyzer/SKILL.md) |
+| Skill | Prerequisites | Description | Install |
+|-------|---------------|-------------|---------|
+| `github` | [gh CLI](https://cli.github.com/) | 使用 `gh` CLI 与 GitHub 交互，处理 PR、CI、Issues 等。使用场景：Cli 自动pr、merged合并 。 | [skillhub.cn](https://skillhub.cn/skills/github) / [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) / [clawhub.ai](https://clawhub.ai/steipete/github) / [GitHub](https://github.com/github/awesome-copilot/tree/main/skills/gh-cli) |
+| `bilibili-cli` | `uvx bilibili-cli` (Python uv) | B站CLI工具：视频详情、字幕、搜索、热门、评论、互动等。使用场景：抓取评论、生成AI视频摘要。 | [skills.sh](https://skills.sh/jackwener/bilibili-cli/bilibili-cli) / [GitHub](https://github.com/public-clis/bilibili-cli) / [ModelScope](https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli) |
+| `bilibili-analyzer` | [FFmpeg](https://ffmpeg.org/download.html) | B站视频深度分析：下载视频拆帧、AI分析生成专题文档或实操教程；使用场景：生成图文并茂文档。 | [skills.sh](https://skills.sh/aidotnet/moyucode/bilibili-analyzer) / [ModelScope](https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer) / [GitHub](https://github.com/AIDotNet/MoYuCode/blob/main/skills/tools/bilibili-analyzer/SKILL.md) |
 
 调用方式：`/github`、`/bilibili-cli`、`/bilibili-analyzer`
 
