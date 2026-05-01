@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = "http://www.dyyy.xjtu.edu.cn"
 FIELDNAMES = ['科室大类', '科室名称', '医生工号', '医生名称', '医生职称',
-              '医生科室', '研究方向与专长', '专家介绍', '医生图片URL']
+              '研究方向与专长', '专家介绍', '医生图片URL']
 
 # 需要过滤的非医生条目名称
 SKIP_NAMES = {'相关资讯', '相关科普文章', '更多', '详情', 'more'}
@@ -75,7 +75,7 @@ def build_doctor_row(api_data, account_id='', fallback_name='', fallback_dep='')
     if not api_data:
         return {
             '科室大类': '', '科室名称': fallback_dep,
-            '医生工号': account_id, '医生名称': fallback_name, '医生职称': '', '医生科室': fallback_dep,
+            '医生工号': account_id, '医生名称': fallback_name, '医生职称': '',
             '研究方向与专长': '', '专家介绍': '', '医生图片URL': ''
         }
 
@@ -93,7 +93,6 @@ def build_doctor_row(api_data, account_id='', fallback_name='', fallback_dep='')
         '医生工号': account_id,
         '医生名称': api_data.get('name', fallback_name),
         '医生职称': api_data.get('docJobTitleDicCodeName', ''),
-        '医生科室': f"{api_data.get('departmentName', '')} {api_data.get('hospitalName', '西安交通大学第一附属医院')}".strip(),
         '研究方向与专长': aca_title,
         '专家介绍': api_data.get('introduce', ''),
         '医生图片URL': img_url
