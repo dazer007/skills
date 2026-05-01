@@ -38,6 +38,7 @@ Agent skills collection - 技能生态通用。
 ```bash
 # Claude Code / OpenClaw 通用安装命令
 npx skills add dazer007/my-skills@xjtu-doctor-scraper
+npx skills add dazer007/my-skills  --skil xjtu-doctor-scraper  #自动从仓库目录中寻找
 # Target a specific agent 指定一个agent代理，写入：~/.claude-code/
 npx skills add jackwener/bilibili-cli -a claude-code
 
