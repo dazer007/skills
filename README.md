@@ -38,18 +38,16 @@ Agent skills collection - 技能生态通用。
 ```bash
 # Claude Code / OpenClaw 通用安装命令
 npx skills add dazer007/my-skills@xjtu-doctor-scraper
-
-# Target a specific agent 指定一个agent代理
+# Target a specific agent 指定一个agent代理，写入：~/.claude-code/
 npx skills add jackwener/bilibili-cli -a claude-code
 
-# 使用国内地址
-npx skills add https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli -a openclaw
+# 使用国内ModelScope安装地址安装
+npx skills add https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli     -a openclaw
+npx skills add https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer -a claude-code
 
 # 从GitHub仓库安装指定技能
-npx skills add https://github.com/aidotnet/moyucode --skill bilibili-analyzer
-
-# 从ModelScope安装
-npx skills add https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer
+npx skills add https://github.com/aidotnet/moyucode      --skill bilibili-analyzer
+npx skills add https://github.com/github/awesome-copilot --skill gh-cli
 
 # 或手动克隆安装
 git clone https://github.com/dazer007/my-skills.git
