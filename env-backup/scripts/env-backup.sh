@@ -26,9 +26,9 @@ init_backup_dir() {
     mkdir -p "$BACKUP_DIR"
 }
 
-# 获取当前时间戳
+# 获取当前时间戳 (格式: env_yyyyMMdd_HHmmss)
 get_timestamp() {
-    date +"%Y-%m-%d_%H-%M"
+    date +"env_%Y%m%d_%H%M%S"
 }
 
 # Windows: 获取用户环境变量
@@ -141,7 +141,7 @@ list_backups() {
 
     for meta in "$BACKUP_DIR"/*.meta.json; do
         if [[ -f "$meta" ]]; then
-            local timestamp=$(basename "$meta" | sed 's/.meta.json//')
+            local timestamp=$(basename "$meta" | sed 's/_user.meta.json//;s/_system.meta.json//')
             local scope=$(cat "$meta" | grep -o '"scope": "[^"]*"' | sed 's/"scope": "//;s/"$//' || echo "unknown")
             local note=$(cat "$meta" | grep -o '"note": "[^"]*"' | sed 's/"note": "//;s/"$//' || echo "")
             local os=$(cat "$meta" | grep -o '"os": "[^"]*"' | sed 's/"os": "//;s/"$//' || echo "unknown")

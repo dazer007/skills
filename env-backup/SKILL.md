@@ -104,7 +104,7 @@ Windows 分离用户变量和系统变量：
 ### 查看差异
 
 ```bash
-./scripts/env-backup.sh diff 2026-05-01_20-30
+./scripts/env-backup.sh diff env_20260501_213045
 ```
 
 输出示例：
@@ -125,7 +125,7 @@ Windows 分离用户变量和系统变量：
 
 ```bash
 # 恢复用户 PATH
-./scripts/env-backup.sh restore 2026-05-01_20-30 --user
+./scripts/env-backup.sh restore env_20260501_213045 --user
 ```
 
 ## Tags
