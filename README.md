@@ -26,7 +26,7 @@ Agent skills collection - 技能生态通用。
 | Skill | Description | Install |
 |-------|-------------|---------|
 | `github` | 使用 `gh` CLI 与 GitHub 交互，处理 PR、CI、Issues 等 | [skillhub.cn](https://skillhub.cn/skills/github) / [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) / [clawhub.ai](https://clawhub.ai/steipete/github) / [GitHub](https://github.com/github/awesome-copilot/tree/main/skills/gh-cli) |
-| `bilibili-cli` | B站CLI工具：视频详情、字幕、搜索、热门、互动等 | `npx skills add jackwener/bilibili-cli -a claude-code` / [skills.sh](https://skills.sh/jackwener/bilibili-cli/bilibili-cli) / [GitHub](https://github.com/public-clis/bilibili-cli) / [ModelScope](https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli) |
+| `bilibili-cli` | B站CLI工具：视频详情、字幕、搜索、热门、互动等 | [skills.sh](https://skills.sh/jackwener/bilibili-cli/bilibili-cli) / [GitHub](https://github.com/public-clis/bilibili-cli) / [ModelScope](https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli) |
 
 调用方式：`/github`、`/bilibili-cli`
 
@@ -37,6 +37,12 @@ Agent skills collection - 技能生态通用。
 ```bash
 # Claude Code / OpenClaw 通用安装命令
 npx skills add dazer007/my-skills@xjtu-doctor-scraper
+
+# Target a specific agent
+npx skills add jackwener/bilibili-cli -a claude-code
+
+# 使用国内地址
+npx skills add https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli -a openclaw
 
 # 或手动克隆安装
 git clone https://github.com/dazer007/my-skills.git
