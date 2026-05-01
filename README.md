@@ -27,8 +27,9 @@ Agent skills collection - 技能生态通用。
 |-------|-------------|---------|
 | `github` | 使用 `gh` CLI 与 GitHub 交互，处理 PR、CI、Issues 等 | [skillhub.cn](https://skillhub.cn/skills/github) / [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) / [clawhub.ai](https://clawhub.ai/steipete/github) / [GitHub](https://github.com/github/awesome-copilot/tree/main/skills/gh-cli) |
 | `bilibili-cli` | B站CLI工具：视频详情、字幕、搜索、热门、评论、互动等 | [skills.sh](https://skills.sh/jackwener/bilibili-cli/bilibili-cli) / [GitHub](https://github.com/public-clis/bilibili-cli) / [ModelScope](https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli) |
+| `bilibili-analyzer` | B站视频深度分析：下载视频拆帧、AI分析生成专题文档或实操教程 | [skills.sh](https://skills.sh/aidotnet/moyucode/bilibili-analyzer) / [ModelScope](https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer) / [GitHub](https://github.com/AIDotNet/MoYuCode/blob/main/skills/tools/bilibili-analyzer/SKILL.md) |
 
-调用方式：`/github`、`/bilibili-cli`
+调用方式：`/github`、`/bilibili-cli`、`/bilibili-analyzer`
 
 ---
 
@@ -43,6 +44,12 @@ npx skills add jackwener/bilibili-cli -a claude-code
 
 # 使用国内地址
 npx skills add https://www.modelscope.cn/skills/@hwj123hwj/bilibili-cli -a openclaw
+
+# 从GitHub仓库安装指定技能
+npx skills add https://github.com/aidotnet/moyucode --skill bilibili-analyzer
+
+# 从ModelScope安装
+npx skills add https://www.modelscope.cn/skills/@aidotnet/bilibili-analyzer
 
 # 或手动克隆安装
 git clone https://github.com/dazer007/my-skills.git
