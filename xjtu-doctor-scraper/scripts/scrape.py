@@ -15,7 +15,7 @@ import requests, re, json, time, csv, sys, os, threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = "http://www.dyyy.xjtu.edu.cn"
-FIELDNAMES = ['科室大类', '科室小类', '科室名称', '医生工号', '医生名称', '医生职称',
+FIELDNAMES = ['科室大类', '科室名称', '医生工号', '医生名称', '医生职称',
               '医生科室', '研究方向与专长', '专家介绍', '医生图片URL']
 
 # 需要过滤的非医生条目名称
@@ -74,7 +74,7 @@ def build_doctor_row(api_data, account_id='', fallback_name='', fallback_dep='')
     """从API数据构建CSV行"""
     if not api_data:
         return {
-            '科室大类': '', '科室小类': '', '科室名称': fallback_dep,
+            '科室大类': '', '科室名称': fallback_dep,
             '医生工号': account_id, '医生名称': fallback_name, '医生职称': '', '医生科室': fallback_dep,
             '研究方向与专长': '', '专家介绍': '', '医生图片URL': ''
         }
@@ -89,7 +89,6 @@ def build_doctor_row(api_data, account_id='', fallback_name='', fallback_dep='')
 
     return {
         '科室大类': api_data.get('depTypeDicCodeName', ''),
-        '科室小类': api_data.get('parentDepTypeDicCodeName', ''),
         '科室名称': api_data.get('departmentName', fallback_dep),
         '医生工号': account_id,
         '医生名称': api_data.get('name', fallback_name),
@@ -246,6 +245,7 @@ def _fix_one_row(row, idx, total, name_to_url):
         return (idx, 0, "")
 
     # 修复字段
+    row['医生工号'] = account_id
     row['研究方向与专长'] = (api_data.get('acaTitle') or '').strip()
     photo = api_data.get('photoShortUrl', '')
     row['医生图片URL'] = (f"{BASE}/services/industry/app-filesystem/file-show?appId=patient&shortcode={photo}"
