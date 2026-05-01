@@ -56,6 +56,18 @@ cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
 - **手工下载ZIP**: 浏览器打开 https://ghfast.top/https://github.com/dazer007/my-skills/archive/refs/heads/master.zip ，解压后复制技能目录
 - **从国内生态复制**: 访问 skillhub.cn / clawhub.ai 搜索同名技能，直接一键安装
 
+## Installed Skills
+
+本环境已安装的技能：
+
+| Skill | Description | Install |
+|-------|-------------|---------|
+| `github` | 使用 `gh` CLI 与 GitHub 交互，处理 PR、CI、Issues 等 | [skillhub.cn](https://skillhub.cn/skills/github) / [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) |
+
+调用方式：`/github`
+
+---
+
 ## Discover More Skills
 
 探索更多技能生态：
