@@ -65,6 +65,7 @@ cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
 | skillhub.cn | https://skillhub.cn |
 | skills.sh | https://skills.sh |
 | clawhub.ai | https://clawhub.ai |
+| skillkit.io | https://skillkit.io |
 
 ---
 
