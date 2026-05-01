@@ -38,7 +38,7 @@ Agent skills collection - 技能生态通用。
 # Claude Code / OpenClaw 通用安装命令
 npx skills add dazer007/my-skills@xjtu-doctor-scraper
 
-# Target a specific agent
+# Target a specific agent 指定一个agent代理
 npx skills add jackwener/bilibili-cli -a claude-code
 
 # 使用国内地址
@@ -83,9 +83,10 @@ cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
 
 | Platform | URL |
 |----------|-----|
-| skillhub.cn | https://skillhub.cn |
 | skills.sh | https://skills.sh |
+| modelscope.cn | https://www.modelscope.cn/skills |
 | clawhub.ai | https://clawhub.ai |
+| skillhub.cn | https://skillhub.cn |
 | skillkit.io | https://skillkit.io |
 
 ---
