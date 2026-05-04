@@ -1067,14 +1067,16 @@ def main():
         print(f"{'='*60}\n")
 
         if BiliCliFetcher.check_bili_cli():
-            print("[1/2] 使用 bili-cli 获取 AI 摘要...")
+            print("[1/2] 使用 bili video --ai 获取摘要...")
             data = BiliCliFetcher.get_video_info(args.bvid)
 
-            if data and data.get("ai_summary"):
+            ai_summary = data.get("ai_summary", "") if data else ""
+            # 检查 AI 摘要是否存在且内容足够（至少 50 字）
+            if ai_summary and len(ai_summary) >= 50:
                 print(f"  标题: {data.get('title', '未知')}")
                 print(f"  作者: {data.get('author', '未知')}")
                 print(f"  时长: {data.get('duration', 0)}秒")
-                print(f"\n[2/2] AI 摘要:\n{data['ai_summary']}\n")
+                print(f"\n[2/2] AI 摘要 ({len(ai_summary)}字):\n{ai_summary}\n")
 
                 # 生成简单笔记
                 output_dir = Path(args.output) / args.bvid
@@ -1087,7 +1089,7 @@ def main():
                     f"> 作者: {data.get('author', '未知')}\n",
                     f"> 时长: {data.get('duration', 0)//60}分{data.get('duration', 0)%60:02d}秒\n\n",
                     "## AI 摘要\n\n",
-                    f"{data['ai_summary']}\n\n",
+                    f"{ai_summary}\n\n",
                 ]
 
                 # 尝试获取字幕
@@ -1101,7 +1103,8 @@ def main():
                 print(f"{'='*60}")
                 return
             else:
-                print("bili-cli 获取失败，退到帧分析模式...")
+                reason = "AI 摘要为空" if not ai_summary else f"AI 摘要内容太少（{len(ai_summary)}字）"
+                print(f"{reason}，退到帧分析模式...")
         else:
             print("bili-cli 未安装，退到帧分析模式...")
             print("安装方式: pipx install bilibili-cli")
