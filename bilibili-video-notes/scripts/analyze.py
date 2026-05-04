@@ -328,13 +328,23 @@ class BilibiliAnalyzer:
 
     # Vision API 配置
     API_CONFIG = {
+        "zhipu": {
+            "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "model": "glm-4v-flash",
+            "header_format": "bearer",  # Bearer token 格式
+            "content_format": "openai",  # OpenAI 兼容格式
+        },
         "dashscope": {
             "url": "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1/messages",
             "model": "glm-5",
+            "header_format": "anthropic",
+            "content_format": "anthropic",
         },
         "anthropic": {
             "url": "https://api.anthropic.com/v1/messages",
             "model": "claude-sonnet-4-20250514",
+            "header_format": "anthropic",
+            "content_format": "anthropic",
         },
     }
 
@@ -430,11 +440,21 @@ class BilibiliAnalyzer:
         if config_path.exists():
             config = json.loads(config_path.read_text())
             if "apiKeys" in config:
+                # 优先使用 zhipu (glm-4v-flash, 速度快)
+                if config["apiKeys"].get("zhipu"):
+                    self.api_key = config["apiKeys"]["zhipu"]
+                    self.api_type = "zhipu"
+                    return True
                 if config["apiKeys"].get("anthropic"):
                     self.api_key = config["apiKeys"]["anthropic"]
                     self.api_type = "dashscope"
                     return True
 
+        # 环境变量
+        if os.environ.get("ZHIPU_API_KEY"):
+            self.api_key = os.environ["ZHIPU_API_KEY"]
+            self.api_type = "zhipu"
+            return True
         if os.environ.get("ANTHROPIC_API_KEY"):
             self.api_key = os.environ["ANTHROPIC_API_KEY"]
             self.api_type = "anthropic"
@@ -812,12 +832,21 @@ class BilibiliAnalyzer:
             image_data = base64.standard_b64encode(f.read()).decode()
 
         api_config = self.API_CONFIG[self.api_type]
+        header_format = api_config.get("header_format", "anthropic")
+        content_format = api_config.get("content_format", "anthropic")
 
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-        }
+        # 根据 header_format 构建 headers
+        if header_format == "bearer":
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+        else:
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+            }
 
         prompt = f"""分析这张视频截图（时间: {timestamp//60}分{timestamp%60}秒），返回JSON格式：
 {{
@@ -831,35 +860,58 @@ class BilibiliAnalyzer:
 }}
 只返回JSON，不要其他内容。"""
 
-        payload = {
-            "model": api_config["model"],
-            "max_tokens": 800,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": image_data
-                    }},
-                    {"type": "text", "text": prompt}
-                ]
-            }]
-        }
+        # 根据 content_format 构建消息内容
+        if content_format == "openai":
+            content = [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+                {"type": "text", "text": prompt}
+            ]
+            payload = {
+                "model": api_config["model"],
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": content}]
+            }
+        else:
+            content = [
+                {"type": "image", "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": image_data
+                }},
+                {"type": "text", "text": prompt}
+            ]
+            payload = {
+                "model": api_config["model"],
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": content}]
+            }
 
         resp = requests.post(api_config["url"], headers=headers, json=payload, timeout=90)
         result = resp.json()
 
-        if "content" in result:
-            for item in result["content"]:
-                if item.get("type") == "text":
-                    text = item["text"]
-                    try:
-                        json_match = re.search(r'\{[\s\S]*\}', text)
-                        if json_match:
-                            return json.loads(json_match.group())
-                    except:
-                        return {"raw_text": text, "scene_type": "其他"}
+        # 解析响应
+        if content_format == "openai":
+            # OpenAI 格式: choices[0].message.content
+            text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if text:
+                try:
+                    json_match = re.search(r'\{[\s\S]*\}', text)
+                    if json_match:
+                        return json.loads(json_match.group())
+                except:
+                    return {"raw_text": text, "scene_type": "其他"}
+        else:
+            # Anthropic 格式: content[].text
+            if "content" in result:
+                for item in result["content"]:
+                    if item.get("type") == "text":
+                        text = item["text"]
+                        try:
+                            json_match = re.search(r'\{[\s\S]*\}', text)
+                            if json_match:
+                                return json.loads(json_match.group())
+                        except:
+                            return {"raw_text": text, "scene_type": "其他"}
 
         return None
 
