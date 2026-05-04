@@ -48,7 +48,8 @@ class BiliCliFetcher:
         try:
             result = subprocess.run(
                 ["bili", "--help"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5,
+                encoding='utf-8', errors='ignore'
             )
             return result.returncode == 0
         except:
@@ -60,11 +61,12 @@ class BiliCliFetcher:
         try:
             result = subprocess.run(
                 ["bili", "video", bvid, "--ai", "--json"],
-                capture_output=True, text=True, timeout=30
+                capture_output=True, text=True, timeout=30,
+                encoding='utf-8', errors='ignore'
             )
             if result.returncode == 0:
                 # 解析 YAML/JSON 输出
-                data = BiliCliFetcher._parse_bili_output(result.stdout)
+                data = BiliCliFetcher._parse_bili_output(result.stdout, bvid)
                 return data
         except Exception as e:
             print(f"bili-cli 获取失败: {str(e)[:50]}")
@@ -76,7 +78,8 @@ class BiliCliFetcher:
         try:
             result = subprocess.run(
                 ["bili", "video", bvid, "--subtitle"],
-                capture_output=True, text=True, timeout=30
+                capture_output=True, text=True, timeout=30,
+                encoding='utf-8', errors='ignore'
             )
             if result.returncode == 0:
                 # 解析字幕文本
@@ -86,7 +89,7 @@ class BiliCliFetcher:
         return None
 
     @staticmethod
-    def _parse_bili_output(output: str) -> Dict:
+    def _parse_bili_output(output: str, bvid: str) -> Dict:
         """解析 bili 命令输出"""
         data = {
             "title": "",
