@@ -90,7 +90,7 @@ class BiliCliFetcher:
 
     @staticmethod
     def _parse_bili_output(output: str, bvid: str) -> Dict:
-        """解析 bili 命令输出"""
+        """解析 bili 命令输出（JSON 格式）"""
         data = {
             "title": "",
             "author": "",
@@ -101,27 +101,34 @@ class BiliCliFetcher:
             "subtitle": "",
         }
 
-        # 解析 YAML 格式输出
+        try:
+            # 尝试解析 JSON
+            json_data = json.loads(output)
+            if json_data.get("ok") and "data" in json_data:
+                video = json_data["data"].get("video", {})
+                data["title"] = video.get("title", "")
+                data["author"] = video.get("owner", {}).get("name", "")
+                data["duration"] = video.get("duration_seconds", 0)
+                data["view_count"] = video.get("stats", {}).get("view", 0)
+                data["url"] = video.get("url", data["url"])
+                data["ai_summary"] = json_data["data"].get("ai_summary", "")
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        # 备用：YAML 格式解析
         lines = output.split('\n')
         for line in lines:
             if line.startswith('title:'):
                 data["title"] = line.split(':', 1)[1].strip().strip("'")
-            elif line.startswith('owner:') or 'name:' in line:
-                # 解析 owner name
-                if 'name:' in line:
-                    data["author"] = line.split('name:')[1].strip().strip("'")
+            elif 'name:' in line and 'owner' not in line:
+                data["author"] = line.split('name:')[1].strip().strip("'")
             elif line.startswith('duration_seconds:'):
                 data["duration"] = int(line.split(':')[1].strip())
             elif 'view:' in line:
                 data["view_count"] = int(line.split('view:')[1].strip())
             elif line.startswith('ai_summary:'):
                 data["ai_summary"] = line.split(':', 1)[1].strip()
-
-        # 如果没解析到，尝试从 data 字块提取
-        if not data["ai_summary"]:
-            ai_match = re.search(r'ai_summary:\s*(.+)', output)
-            if ai_match:
-                data["ai_summary"] = ai_match.group(1).strip()
 
         return data
 
