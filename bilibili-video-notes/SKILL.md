@@ -1,6 +1,6 @@
 ---
 name: bilibili-video-notes
-description: B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。自动下载视频、智能采样关键帧、AI分析内容、生成图文并茂的Markdown笔记。**支持本地视频文件分析**：直接提供已下载的视频路径，跳过下载环节。触发条件：用户提供B站视频BV号或链接并要求分析/生成笔记，或用户提供本地视频文件路径。
+description: B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。自动下载视频、智能采样关键帧、AI分析内容、生成图文并茂的Markdown笔记。**支持本地视频文件分析**：直接提供已下载的视频路径，跳过下载环节。**依赖插件**：bilibili-cli（获取视频信息）、bilibili-analyzer（视频下载拆帧）。触发条件：用户提供B站视频BV号或链接并要求分析/生成笔记，或用户提供本地视频文件路径。
 type: skill
 agent_created: true
 version: 2.0
