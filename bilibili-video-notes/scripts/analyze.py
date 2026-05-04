@@ -341,7 +341,8 @@ class BilibiliAnalyzer:
     def __init__(self, bvid: str = None, output_dir: str = "./output",
                  local_video: str = None, video_title: str = None,
                  max_frames: int = None, scene_threshold: float = None,
-                 similarity_threshold: float = 0.80):
+                 similarity_threshold: float = 0.80,
+                 ai_reference: str = None):
         """
         初始化分析器
 
@@ -353,6 +354,7 @@ class BilibiliAnalyzer:
             max_frames: 最大帧数
             scene_threshold: 场景变化阈值
             similarity_threshold: 相似帧去重阈值
+            ai_reference: AI 摘要参考内容
         """
         # 本地视频模式
         self.local_video_path = None
@@ -387,6 +389,7 @@ class BilibiliAnalyzer:
         self.similarity_threshold = similarity_threshold
 
         self.video_info = {}
+        self.ai_reference = ai_reference or ""
         self.frame_analysis = []
         self.api_key = None
         self.api_type = None
@@ -900,6 +903,11 @@ class BilibiliAnalyzer:
             first = self.frame_analysis[0]
             lines.append(f"![{first['frame']}: 视频开始](./images/{first['frame']}.jpg)\n\n")
 
+        # AI 摘要参考（如有）
+        if self.ai_reference:
+            lines.append("**AI 内容摘要（参考）**：\n\n")
+            lines.append(f"{self.ai_reference}\n\n")
+
         if description:
             lines.append(f"**视频简介**：{description[:300]}\n\n")
 
@@ -1060,54 +1068,35 @@ def main():
 
     args = parser.parse_args()
 
-    # 快速模式：使用 bili-cli
+    # 快速模式：先获取 AI 摘要作为参考，再进行帧分析
     if args.quick and args.bvid and not args.video:
         print(f"\n{'='*60}")
-        print("Bilibili Video Notes Generator v3.0 - 快速模式")
+        print("Bilibili Video Notes Generator v3.0")
         print(f"{'='*60}\n")
 
+        # 获取 AI 摘要作为参考信息
+        ai_ref = ""
         if BiliCliFetcher.check_bili_cli():
-            print("[1/2] 使用 bili video --ai 获取摘要...")
+            print("[预览] 使用 bili video --ai 获取摘要参考...")
             data = BiliCliFetcher.get_video_info(args.bvid)
 
-            ai_summary = data.get("ai_summary", "") if data else ""
-            # 检查 AI 摘要是否存在且内容足够（至少 50 字）
-            if ai_summary and len(ai_summary) >= 50:
+            if data:
                 print(f"  标题: {data.get('title', '未知')}")
                 print(f"  作者: {data.get('author', '未知')}")
-                print(f"  时长: {data.get('duration', 0)}秒")
-                print(f"\n[2/2] AI 摘要 ({len(ai_summary)}字):\n{ai_summary}\n")
+                print(f"  时长: {data.get('duration', 0)//60}分{data.get('duration', 0)%60:02d}秒")
 
-                # 生成简单笔记
-                output_dir = Path(args.output) / args.bvid
-                output_dir.mkdir(parents=True, exist_ok=True)
-                note_path = output_dir / "视频笔记.md"
+                ai_summary = data.get("ai_summary", "")
+                if ai_summary and len(ai_summary) >= 30:
+                    print(f"\n  AI 摘要参考 ({len(ai_summary)}字):")
+                    print(f"  {ai_summary[:200]}{'...' if len(ai_summary) > 200 else ''}")
+                    ai_ref = ai_summary
+                else:
+                    print("  AI 摘要: 无或内容太少")
 
-                lines = [
-                    f"# {data.get('title', '视频笔记')}\n\n",
-                    f"> 视频来源: {data.get('url', '')}\n",
-                    f"> 作者: {data.get('author', '未知')}\n",
-                    f"> 时长: {data.get('duration', 0)//60}分{data.get('duration', 0)%60:02d}秒\n\n",
-                    "## AI 摘要\n\n",
-                    f"{ai_summary}\n\n",
-                ]
-
-                # 尝试获取字幕
-                subtitle = BiliCliFetcher.get_subtitle(args.bvid)
-                if subtitle:
-                    lines.append("## 字幕内容\n\n")
-                    lines.append(subtitle[:2000] + "\n\n")
-
-                note_path.write_text("".join(lines), encoding="utf-8")
-                print(f"笔记已保存: {note_path}")
-                print(f"{'='*60}")
-                return
-            else:
-                reason = "AI 摘要为空" if not ai_summary else f"AI 摘要内容太少（{len(ai_summary)}字）"
-                print(f"{reason}，退到帧分析模式...")
-        else:
-            print("bili-cli 未安装，退到帧分析模式...")
-            print("安装方式: pipx install bilibili-cli")
+        # 继续帧分析生成笔记
+        print(f"\n{'='*60}")
+        print("开始帧分析生成图文笔记...")
+        print(f"{'='*60}\n")
 
     # 帧分析模式或快速模式失败
     analyzer = BilibiliAnalyzer(
@@ -1117,7 +1106,8 @@ def main():
         video_title=args.title,
         max_frames=args.max_frames if args.frames else None,
         scene_threshold=args.scene_threshold,
-        similarity_threshold=args.similarity if not args.no_dedup else 1.0
+        similarity_threshold=args.similarity if not args.no_dedup else 1.0,
+        ai_reference=ai_ref  # AI 摘要作为参考
     )
 
     # 运行帧分析
