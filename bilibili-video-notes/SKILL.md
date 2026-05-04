@@ -28,12 +28,16 @@ bili video BV1xx --ai
 ### 工作流程优先级
 
 ```
-Step 1: bili video --ai      → 获取 AI 摘要（首选）
-        ↓ 失败或需要图文
-Step 2: bili video --subtitle → 获取字幕文本（如有）
-        ↓ 失败或需要图文
-Step 3: 帧提取 + Vision API  → 详细图文笔记（备选）
+Step 1: bili video BV1xx --ai --json  → 获取 AI 摘要（首选，< 1秒）
+        ↓ AI 摘要为空或 < 50字
+Step 2: bili video BV1xx --subtitle   → 获取字幕文本（如有）
+        ↓ 需要详细图文笔记
+Step 3: 帧提取 + Vision API          → 详细图文笔记（备选）
 ```
+
+**判断逻辑**：
+- AI 摘要 >= 50字：直接生成笔记（快速模式成功）
+- AI 摘要 < 50字或为空：退到帧分析模式
 
 ## 版本对比
 
