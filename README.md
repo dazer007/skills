@@ -20,6 +20,7 @@ Agent skills collection - 技能生态通用。
 | [xjtu-doctor-scraper](./xjtu-doctor-scraper) | 爬取西安交通大学第一附属医院官网医生列表 |
 | [env-backup](./env-backup) | 环境变量备份与恢复工具，支持 Windows/Linux/Mac，记录变更历史、快速恢复、对比差异 |
 | [summarize-config](./summarize-config) | 配置 [summarize CLI](https://summarize.sh/) 工具，交互式配置向导、自动验证修复、多代理切换 |
+| [bilibili-video-notes](./bilibili-video-notes) | B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。智能下载、场景采样、AI分析、生成图文笔记。**支持本地视频文件分析** |
 
 ## Installed Skills
 
