@@ -273,7 +273,7 @@ for frame in sampled_frames:
 ```json
 {
   "apiKeys": {
-    "zhipu": "xxx.yyy",       // glm-4v-flash（推荐，速度快 ~3s/帧）
+    "zhipu": "xxx.yyy",       // GLM-OCR（推荐，专业OCR模型）
     "anthropic": "sk-xxx",    // DashScope 代理
     "openai": "sk-xxx"        // OpenAI API
   }
@@ -281,10 +281,13 @@ for frame in sampled_frames:
 ```
 
 支持 API（按优先级）：
-1. **智谱 GLM-4V-Flash**（推荐）- 速度快，约 3秒/帧
-2. DashScope API（国内代理）
-3. Anthropic API
-4. OpenAI API
+1. **智谱 GLM-OCR**（推荐）- 专业 OCR 模型，识别文字更准确
+2. GLM-4V-Flash - 通用视觉模型
+3. DashScope API（国内代理）
+4. Anthropic API
+5. OpenAI API
+
+GLM-OCR 文档: https://docs.bigmodel.cn/cn/guide/tools/zhipu-ocr
 
 ## 常见问题
 

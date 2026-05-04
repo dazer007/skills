@@ -330,9 +330,9 @@ class BilibiliAnalyzer:
     API_CONFIG = {
         "zhipu": {
             "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-            "model": "glm-4v-flash",
-            "header_format": "bearer",  # Bearer token 格式
-            "content_format": "openai",  # OpenAI 兼容格式
+            "model": "glm-ocr",  # GLM-OCR 专用模型
+            "header_format": "bearer",
+            "content_format": "openai",
         },
         "dashscope": {
             "url": "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1/messages",
@@ -848,17 +848,10 @@ class BilibiliAnalyzer:
                 "anthropic-version": "2023-06-01",
             }
 
-        prompt = f"""分析这张视频截图（时间: {timestamp//60}分{timestamp%60}秒），返回JSON格式：
-{{
-    "scene_type": "代码编辑器/终端/浏览器/PPT/演示/其他",
-    "title": "当前演示的标题或主题（简短）",
-    "key_text": "屏幕上的关键文字内容（代码、命令、配置等）",
-    "action": "正在演示的操作",
-    "code_snippets": ["如果有代码，完整转录"],
-    "config_items": {"如果有配置项，记录键值"},
-    "notes": "重要说明或注意事项"
-}}
-只返回JSON，不要其他内容。"""
+        prompt = """请识别图片中所有文字内容，逐行输出。
+然后总结一个简短标题（10字以内）作为主要内容概括。
+格式：【标题】xxx
+内容：逐行文字"""
 
         # 根据 content_format 构建消息内容
         if content_format == "openai":
@@ -889,29 +882,29 @@ class BilibiliAnalyzer:
         resp = requests.post(api_config["url"], headers=headers, json=payload, timeout=90)
         result = resp.json()
 
-        # 解析响应
+        # 解析响应 - GLM-OCR 返回纯文本格式
         if content_format == "openai":
-            # OpenAI 格式: choices[0].message.content
             text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if text:
-                try:
-                    json_match = re.search(r'\{[\s\S]*\}', text)
-                    if json_match:
-                        return json.loads(json_match.group())
-                except:
-                    return {"raw_text": text, "scene_type": "其他"}
         else:
-            # Anthropic 格式: content[].text
+            text = ""
             if "content" in result:
                 for item in result["content"]:
                     if item.get("type") == "text":
                         text = item["text"]
-                        try:
-                            json_match = re.search(r'\{[\s\S]*\}', text)
-                            if json_match:
-                                return json.loads(json_match.group())
-                        except:
-                            return {"raw_text": text, "scene_type": "其他"}
+                        break
+
+        if text:
+            # 从 OCR 文本提取标题和内容
+            title_match = re.search(r'【标题】\s*(.+)', text)
+            title = title_match.group(1).strip()[:20] if title_match else "未知内容"
+            content_match = re.search(r'内容[：:]\s*(.+)', text)
+            content = content_match.group(1).strip() if content_match else text
+            return {
+                "title": title,
+                "key_text": content,
+                "raw_text": text,
+                "scene_type": "其他"
+            }
 
         return None
 
