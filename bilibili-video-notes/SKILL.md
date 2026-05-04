@@ -272,17 +272,19 @@ for frame in sampled_frames:
 
 ```json
 {
-  "model": "anthropic/glm-5",
   "apiKeys": {
-    "anthropic": "sk-xxx"
+    "zhipu": "xxx.yyy",       // glm-4v-flash（推荐，速度快 ~3s/帧）
+    "anthropic": "sk-xxx",    // DashScope 代理
+    "openai": "sk-xxx"        // OpenAI API
   }
 }
 ```
 
-支持 API：
-- Anthropic API（推荐）
-- DashScope API（国内代理）
-- OpenAI API
+支持 API（按优先级）：
+1. **智谱 GLM-4V-Flash**（推荐）- 速度快，约 3秒/帧
+2. DashScope API（国内代理）
+3. Anthropic API
+4. OpenAI API
 
 ## 常见问题
 
