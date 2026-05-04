@@ -19,7 +19,7 @@ Agent skills collection - 技能生态通用。
 |-------|-------------|
 | [xjtu-doctor-scraper](./xjtu-doctor-scraper) | 爬取西安交通大学第一附属医院官网医生列表 |
 | [env-backup](./env-backup) | 环境变量备份与恢复工具，支持 Windows/Linux/Mac，记录变更历史、快速恢复、对比差异 |
-| [summarize-config](./summarize-config) | 配置 summarize CLI 工具，交互式配置向导、自动验证修复、多代理切换 |
+| [summarize-config](./summarize-config) | 配置 [summarize CLI](https://summarize.sh/) 工具，交互式配置向导、自动验证修复、多代理切换 |
 
 ## Installed Skills
 
