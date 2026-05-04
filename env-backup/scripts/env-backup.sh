@@ -6,6 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP_DIR="${HOME}/.env-backup"
+CHANGE_LOG="${BACKUP_DIR}/change-log.tsv"
 OS_TYPE=""
 
 # 检测操作系统
@@ -26,9 +27,53 @@ init_backup_dir() {
     mkdir -p "$BACKUP_DIR"
 }
 
+# 获取 ISO 时间戳
+get_iso_timestamp() {
+    date +"%Y-%m-%dT%H:%M:%S%z"
+}
+
 # 获取当前时间戳 (格式: env_yyyyMMdd_HHmmss)
 get_timestamp() {
     date +"env_%Y%m%d_%H%M%S"
+}
+
+# TSV 字段转义，避免换行和 tab 破坏日志格式
+tsv_escape() {
+    local value="${1:-}"
+    value="${value//$'\t'/ }"
+    value="${value//$'\r'/ }"
+    value="${value//$'\n'/ }"
+    printf "%s" "$value"
+}
+
+# 初始化变更日志
+init_change_log() {
+    init_backup_dir
+    if [[ ! -f "$CHANGE_LOG" ]]; then
+        printf "timestamp\tos\tscope\tbackup_id\tsummary\tchanged\tcommand\tresult\n" > "$CHANGE_LOG"
+    fi
+}
+
+# 写入一条变更记录
+append_change_log() {
+    local backup_id="${1:-}"
+    local scope="${2:-user}"
+    local summary="${3:-}"
+    local changed="${4:-}"
+    local command_text="${5:-}"
+    local result="${6:-}"
+
+    init_change_log
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+        "$(get_iso_timestamp)" \
+        "$(tsv_escape "$OS_TYPE")" \
+        "$(tsv_escape "$scope")" \
+        "$(tsv_escape "$backup_id")" \
+        "$(tsv_escape "$summary")" \
+        "$(tsv_escape "$changed")" \
+        "$(tsv_escape "$command_text")" \
+        "$(tsv_escape "$result")" >> "$CHANGE_LOG"
 }
 
 # Windows: 获取用户环境变量
@@ -122,9 +167,67 @@ backup_env() {
     # 添加元数据
     local meta_file="$BACKUP_DIR/${timestamp}_${scope}.meta.json"
     echo "{\"timestamp\": \"$timestamp\", \"scope\": \"$scope\", \"note\": \"$note\", \"os\": \"$OS_TYPE\"}" > "$meta_file"
+    append_change_log "$timestamp" "$scope" "backup created" "" "$0 backup --note \"$note\" --$scope" "success"
 
     echo "备份完成: $backup_file"
     echo "备份ID: $timestamp"
+}
+
+# 记录环境变量修改
+log_change() {
+    local backup_id=""
+    local scope="user"
+    local summary=""
+    local changed_items=()
+    local command_text=""
+    local result="unspecified"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --backup-id) backup_id="${2:-}"; shift 2 ;;
+            --scope) scope="${2:-user}"; shift 2 ;;
+            --user) scope="user"; shift ;;
+            --system) scope="system"; shift ;;
+            --summary) summary="${2:-}"; shift 2 ;;
+            --changed) changed_items+=("${2:-}"); shift 2 ;;
+            --command) command_text="${2:-}"; shift 2 ;;
+            --result) result="${2:-}"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    if [[ -z "$summary" ]]; then
+        echo "请提供 --summary 描述本次修改"
+        return 1
+    fi
+
+    local changed_joined=""
+    local item
+    for item in "${changed_items[@]}"; do
+        if [[ -n "$changed_joined" ]]; then
+            changed_joined="${changed_joined}; ${item}"
+        else
+            changed_joined="$item"
+        fi
+    done
+
+    append_change_log "$backup_id" "$scope" "$summary" "$changed_joined" "$command_text" "$result"
+    echo "变更记录已写入: $CHANGE_LOG"
+}
+
+# 查看环境变量修改记录
+show_change_log() {
+    init_change_log
+
+    echo "=== 环境变量变更记录 ==="
+    echo "文件: $CHANGE_LOG"
+    echo ""
+
+    if command -v column &>/dev/null; then
+        column -t -s $'\t' "$CHANGE_LOG"
+    else
+        cat "$CHANGE_LOG"
+    fi
 }
 
 # 列出所有备份
@@ -313,6 +416,8 @@ show_help() {
     echo "  $0 show <backup-id> [--user|--system]      显示备份内容"
     echo "  $0 diff <backup-id> [--user|--system]      对比差异"
     echo "  $0 restore <backup-id> [--user|--system]   生成恢复命令"
+    echo "  $0 log --backup-id <id> --summary <text> [--changed <text>] [--command <text>] [--result <text>]  记录修改"
+    echo "  $0 changelog                               查看修改记录"
     echo ""
     echo "平台: Windows / Linux / macOS"
 }
@@ -379,6 +484,12 @@ main() {
                 esac
             done
             restore_env "$backup_id" "$scope"
+            ;;
+        log)
+            log_change "$@"
+            ;;
+        changelog|changes)
+            show_change_log
             ;;
         help|--help|-h)
             show_help

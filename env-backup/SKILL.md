@@ -1,40 +1,29 @@
 ---
 name: env-backup
-description: 环境变量备份与恢复工具。**触发条件**：用户请求修改/切换/添加/删除环境变量（PATH、JAVA_HOME、GOPATH等）时，自动先备份再执行修改。支持 Windows/Linux/Mac。
-metadata:
-  short-description: 环境变量备份恢复
-  triggers:
-    - "修改环境变量"
-    - "切换 JDK"
-    - "更改 PATH"
-    - "设置 JAVA_HOME"
-    - "添加到 PATH"
-    - "删除环境变量"
-    - "环境变量备份"
+description: 环境变量安全备份、恢复、差异对比和变更记录工具，支持 Windows/Linux/macOS。Use this skill whenever Codex may read, add, remove, rename, persist, repair, or modify environment variables or PATH-like configuration, including PATH/Path, JAVA_HOME, JDK/JRE switching, GOPATH/GOROOT, PYTHONPATH, NODE_HOME, NPM/Yarn/pnpm paths, CUDA_PATH, ANDROID_HOME, SDK/toolchain paths, proxy variables, API key variables, shell profile edits (.bashrc/.zshrc/.profile/.bash_profile), PowerShell profile edits, Windows user/system environment variables, registry environment changes, setx, [Environment]::SetEnvironmentVariable, export VAR=..., $env:VAR=..., installer PATH fixes, or any request that could affect command discovery. Before any env-changing command or file edit, create a backup; after every env-related change, append a change log entry describing what changed, the command/file touched, result, and backup id.
 ---
 
 # Env Backup
 
 环境变量管理工具，支持备份、恢复、对比查看。
 
-**重要：修改环境变量前自动备份，防止误操作导致环境丢失。**
+**硬性规则：任何环境变量或 PATH 相关修改前先备份，修改后写变更记录。**
 
-## Trigger
+## Mandatory Workflow
 
-以下场景**自动触发**此 skill，先备份再执行操作：
+When handling environment-variable work:
 
-| 触发词 | 操作 |
-|--------|------|
-| "修改环境变量"、"更改环境变量" | 备份 + 执行修改 |
-| "切换 JDK"、"切换 Java 版本" | 备份 + 修改 JAVA_HOME/PATH |
-| "添加到 PATH"、"删除 PATH" | 备份 + 修改 PATH |
-| "设置 JAVA_HOME"、"设置 GOPATH" | 备份 + 设置变量 |
-| "环境变量备份"、"备份环境变量" | 仅备份 |
+1. Run `backup` before the first change. Keep the printed backup ID.
+2. Make the requested environment change.
+3. Run `log` immediately after the change, even if the change failed or was skipped.
+4. Run `diff <backup-id>` when useful, especially after PATH edits or toolchain switches.
+5. Tell the user the backup ID and where the change log is stored.
 
-**标准工作流**：
-1. 收到修改请求 → 自动执行 `backup`
-2. 执行用户请求的环境变量修改
-3. 可选：执行 `diff` 展示变更对比
+Prefer a specific note on backup, for example:
+
+```bash
+./scripts/env-backup.sh backup --note "before setting JAVA_HOME for JDK 21"
+```
 
 ## 功能
 
@@ -43,6 +32,8 @@ metadata:
 - **diff**: 对比当前与备份的环境变量差异
 - **list**: 列出所有备份记录
 - **show**: 显示指定备份内容
+- **log**: 记录一次环境变量修改
+- **changelog**: 查看环境变量修改记录
 
 ## 平台支持
 
@@ -73,6 +64,12 @@ metadata:
 
 # 恢复环境变量
 ./scripts/env-backup.sh restore <backup-id> [--user|--system]
+
+# 记录一次修改
+./scripts/env-backup.sh log --backup-id <backup-id> --summary "设置 JAVA_HOME" --changed "JAVA_HOME=D:\Java\jdk-21" --command "[Environment]::SetEnvironmentVariable(...)" --result "success"
+
+# 查看修改记录
+./scripts/env-backup.sh changelog
 ```
 
 ## Windows 特殊说明
@@ -88,6 +85,8 @@ Windows 分离用户变量和系统变量：
 | Windows | `~/.env-backup/` |
 | Linux | `~/.env-backup/` |
 | macOS | `~/.env-backup/` |
+
+变更记录文件：`~/.env-backup/change-log.tsv`
 
 ## 示例
 
@@ -128,9 +127,22 @@ Windows 分离用户变量和系统变量：
 ./scripts/env-backup.sh restore env_20260501_213045 --user
 ```
 
+### 记录修改
+
+```bash
+./scripts/env-backup.sh log \
+  --backup-id env_20260501_213045 \
+  --scope user \
+  --summary "切换 JDK 到 21" \
+  --changed "JAVA_HOME=D:\Program Files\Java\jdk-21" \
+  --changed "PATH added D:\Program Files\Java\jdk-21\bin" \
+  --command "PowerShell SetEnvironmentVariable" \
+  --result "success"
+```
+
 ## Tags
 
-`environment`, `backup`, `restore`, `path`, `windows`, `linux`, `macos`
+`environment`, `backup`, `restore`, `path`, `windows`, `linux`, `macos`, `JAVA_HOME`, `setx`, `PowerShell`, `shell-profile`
 
 ## Hooks 配置 (可选自动化)
 
@@ -147,7 +159,7 @@ Windows 分离用户变量和系统变量：
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command' | grep -qE '(SetEnvironmentVariable|JAVA_HOME|PATH)' && ~/.claude/skills/env-backup/scripts/env-backup.sh backup --note 'auto-backup' 2>/dev/null || true",
+            "command": "jq -r '.tool_input.command' | grep -qiE '(SetEnvironmentVariable|setx|JAVA_HOME|GOPATH|GOROOT|PYTHONPATH|NODE_HOME|CUDA_PATH|ANDROID_HOME|PATH|\\.bashrc|\\.zshrc|PowerShell.*profile|export [A-Za-z_][A-Za-z0-9_]*=|\\$env:)' && ~/.claude/skills/env-backup/scripts/env-backup.sh backup --note 'auto-backup before environment-related command' 2>/dev/null || true",
             "timeout": 10,
             "statusMessage": "Auto-backing up environment variables..."
           }
