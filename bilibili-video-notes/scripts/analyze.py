@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-Bilibili Video Notes Generator v2.0
-原 bilibili-analyzer 改进版 - 智能采样、单线程分析
+Bilibili Video Notes Generator v3.0
+优先使用 bili-cli 获取 AI 摘要，失败时退到帧分析
 
 改进点：
-1. 优先使用 .NET prepare.cs，环境不满足退到 yt-dlp
-2. 智能采样：场景变化检测 + 相似帧去重
-3. 单线程分析：避免 Agent 输出超限
-4. 支持本地视频文件：直接分析已下载的视频
+1. v3.0: 优先使用 bili video --ai 获取摘要（秒级完成）
+2. v3.0: 支持 bili video --subtitle 获取字幕
+3. v2.0: 智能采样：场景变化检测 + 相似帧去重
+4. v2.0: 单线程分析：避免 Agent 输出超限
+5. v2.0: 支持本地视频文件：直接分析已下载的视频
 
 Usage:
-    # 从 B站 BV号下载并分析
-    python analyze.py BV1xx411c7mD -o ./output
+    # 首选：使用 bili-cli 获取 AI 摘要（秒级）
+    bili video BV1xx411c7mD --ai
 
-    # 从本地视频文件分析（跳过下载）
-    python analyze.py --video ./local_video.mp4 -o ./output --title "我的教程"
+    # 备选：帧分析生成图文笔记
+    python analyze.py BV1xx411c7mD -o ./output --frames
 
-    # 从本地视频分析（自动从文件名推断标题）
-    python analyze.py --video ./Codex教程.mp4 -o ./output
+    # 本地视频分析
+    python analyze.py --video ./local_video.mp4 -o ./output
 """
 
 import argparse
@@ -36,6 +37,104 @@ try:
 except ImportError:
     print("请安装 requests: pip install requests")
     sys.exit(1)
+
+
+class BiliCliFetcher:
+    """使用 bili-cli 获取视频信息（优先方式）"""
+
+    @staticmethod
+    def check_bili_cli() -> bool:
+        """检测 bili 命令是否可用"""
+        try:
+            result = subprocess.run(
+                ["bili", "--help"],
+                capture_output=True, text=True, timeout=5
+            )
+            return result.returncode == 0
+        except:
+            return False
+
+    @staticmethod
+    def get_video_info(bvid: str) -> Optional[Dict]:
+        """使用 bili video --ai 获取视频信息和 AI 摘要"""
+        try:
+            result = subprocess.run(
+                ["bili", "video", bvid, "--ai", "--json"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                # 解析 YAML/JSON 输出
+                data = BiliCliFetcher._parse_bili_output(result.stdout)
+                return data
+        except Exception as e:
+            print(f"bili-cli 获取失败: {str(e)[:50]}")
+        return None
+
+    @staticmethod
+    def get_subtitle(bvid: str) -> Optional[str]:
+        """使用 bili video --subtitle 获取字幕"""
+        try:
+            result = subprocess.run(
+                ["bili", "video", bvid, "--subtitle"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                # 解析字幕文本
+                return BiliCliFetcher._extract_subtitle(result.stdout)
+        except:
+            pass
+        return None
+
+    @staticmethod
+    def _parse_bili_output(output: str) -> Dict:
+        """解析 bili 命令输出"""
+        data = {
+            "title": "",
+            "author": "",
+            "duration": 0,
+            "view_count": 0,
+            "url": f"https://www.bilibili.com/video/{bvid}",
+            "ai_summary": "",
+            "subtitle": "",
+        }
+
+        # 解析 YAML 格式输出
+        lines = output.split('\n')
+        for line in lines:
+            if line.startswith('title:'):
+                data["title"] = line.split(':', 1)[1].strip().strip("'")
+            elif line.startswith('owner:') or 'name:' in line:
+                # 解析 owner name
+                if 'name:' in line:
+                    data["author"] = line.split('name:')[1].strip().strip("'")
+            elif line.startswith('duration_seconds:'):
+                data["duration"] = int(line.split(':')[1].strip())
+            elif 'view:' in line:
+                data["view_count"] = int(line.split('view:')[1].strip())
+            elif line.startswith('ai_summary:'):
+                data["ai_summary"] = line.split(':', 1)[1].strip()
+
+        # 如果没解析到，尝试从 data 字块提取
+        if not data["ai_summary"]:
+            ai_match = re.search(r'ai_summary:\s*(.+)', output)
+            if ai_match:
+                data["ai_summary"] = ai_match.group(1).strip()
+
+        return data
+
+    @staticmethod
+    def _extract_subtitle(output: str) -> str:
+        """从 bili 输出提取字幕文本"""
+        # 提取 subtitle items
+        text_lines = []
+        in_subtitle = False
+        for line in output.split('\n'):
+            if 'subtitle:' in line or 'items:' in line:
+                in_subtitle = True
+            elif in_subtitle and line.strip().startswith('text:'):
+                text = line.split('text:')[1].strip().strip("'")
+                text_lines.append(text)
+        return '\n'.join(text_lines)
 
 
 class VideoInfoExtractor:
@@ -842,7 +941,7 @@ class BilibiliAnalyzer:
     def run(self) -> Optional[Path]:
         """完整运行流程"""
         print(f"\n{'='*60}")
-        print(f"Bilibili Video Notes Generator v2.0")
+        print(f"Bilibili Video Notes Generator v3.0")
 
         if self.is_local_mode:
             print(f"模式: 本地视频分析")
@@ -905,21 +1004,21 @@ class BilibiliAnalyzer:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="B站视频笔记生成器 v2.0（支持本地视频）",
+        description="B站视频笔记生成器 v3.0（优先使用 bili-cli）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例用法:
-  # 从 B站下载并分析
-  python analyze.py BV1xx411c7mD -o ./output
+  # 首选：使用 bili-cli 快速获取 AI 摘要（推荐）
+  bili video BV1xx411c7mD --ai
 
-  # 从本地视频分析
+  # 或使用本脚本的快速模式
+  python analyze.py BV1xx411c7mD --quick
+
+  # 详细图文笔记（帧分析）
+  python analyze.py BV1xx411c7mD --frames -o ./output
+
+  # 本地视频分析
   python analyze.py --video ./my_video.mp4 -o ./output
-
-  # 指定标题
-  python analyze.py --video ./my_video.mp4 --title "Python教程" -o ./output
-
-  # 控制帧数
-  python analyze.py --video ./long_video.mp4 -f 60 -o ./output
 """
     )
 
@@ -934,31 +1033,82 @@ def main():
     # 本地视频专用参数
     parser.add_argument("--title", "-t", help="视频标题（用于本地视频）")
 
+    # 模式选择
+    parser.add_argument("--quick", "-q", action="store_true",
+                        help="快速模式：优先使用 bili-cli 获取 AI 摘要（秒级完成）")
+    parser.add_argument("--frames", action="store_true",
+                        help="帧分析模式：提取关键帧生成图文笔记")
+
     # 分析参数
-    parser.add_argument("-f", "--frames", type=int, default=None, help="最大帧数")
-    parser.add_argument("--scene-threshold", type=float, default=None, help="场景变化阈值(0.1-0.5)")
+    parser.add_argument("-f", "--max-frames", type=int, default=60, help="最大帧数")
+    parser.add_argument("--scene-threshold", type=float, default=0.3, help="场景变化阈值(0.1-0.5)")
     parser.add_argument("--similarity", type=float, default=0.80, help="相似帧去重阈值")
 
     # 控制参数
-    parser.add_argument("--no-download", action="store_true", help="跳过下载（仅用于B站模式，需已有video.mp4）")
+    parser.add_argument("--no-download", action="store_true", help="跳过下载")
     parser.add_argument("--no-dedup", action="store_true", help="跳过去重")
 
     args = parser.parse_args()
 
-    # 创建分析器
+    # 快速模式：使用 bili-cli
+    if args.quick and args.bvid and not args.video:
+        print(f"\n{'='*60}")
+        print("Bilibili Video Notes Generator v3.0 - 快速模式")
+        print(f"{'='*60}\n")
+
+        if BiliCliFetcher.check_bili_cli():
+            print("[1/2] 使用 bili-cli 获取 AI 摘要...")
+            data = BiliCliFetcher.get_video_info(args.bvid)
+
+            if data and data.get("ai_summary"):
+                print(f"  标题: {data.get('title', '未知')}")
+                print(f"  作者: {data.get('author', '未知')}")
+                print(f"  时长: {data.get('duration', 0)}秒")
+                print(f"\n[2/2] AI 摘要:\n{data['ai_summary']}\n")
+
+                # 生成简单笔记
+                output_dir = Path(args.output) / args.bvid
+                output_dir.mkdir(parents=True, exist_ok=True)
+                note_path = output_dir / "视频笔记.md"
+
+                lines = [
+                    f"# {data.get('title', '视频笔记')}\n\n",
+                    f"> 视频来源: {data.get('url', '')}\n",
+                    f"> 作者: {data.get('author', '未知')}\n",
+                    f"> 时长: {data.get('duration', 0)//60}分{data.get('duration', 0)%60:02d}秒\n\n",
+                    "## AI 摘要\n\n",
+                    f"{data['ai_summary']}\n\n",
+                ]
+
+                # 尝试获取字幕
+                subtitle = BiliCliFetcher.get_subtitle(args.bvid)
+                if subtitle:
+                    lines.append("## 字幕内容\n\n")
+                    lines.append(subtitle[:2000] + "\n\n")
+
+                note_path.write_text("".join(lines), encoding="utf-8")
+                print(f"笔记已保存: {note_path}")
+                print(f"{'='*60}")
+                return
+            else:
+                print("bili-cli 获取失败，退到帧分析模式...")
+        else:
+            print("bili-cli 未安装，退到帧分析模式...")
+            print("安装方式: pipx install bilibili-cli")
+
+    # 帧分析模式或快速模式失败
     analyzer = BilibiliAnalyzer(
         bvid=args.bvid,
         output_dir=args.output,
         local_video=args.video,
         video_title=args.title,
-        max_frames=args.frames,
+        max_frames=args.max_frames if args.frames else None,
         scene_threshold=args.scene_threshold,
         similarity_threshold=args.similarity if not args.no_dedup else 1.0
     )
 
-    # 运行
+    # 运行帧分析
     if args.no_download and not analyzer.is_local_mode:
-        # --no-download 仅用于 B站模式
         analyzer.output_dir.mkdir(parents=True, exist_ok=True)
         analyzer.get_video_info()
         analyzer.analyze_frames()

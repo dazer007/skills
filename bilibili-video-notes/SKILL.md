@@ -1,27 +1,49 @@
 ---
 name: bilibili-video-notes
-description: B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。自动下载视频、智能采样关键帧、AI分析内容、生成图文并茂的Markdown笔记。**支持本地视频文件分析**：直接提供已下载的视频路径，跳过下载环节。**依赖插件**：bilibili-cli（获取视频信息）、bilibili-analyzer（视频下载拆帧）。触发条件：用户提供B站视频BV号或链接并要求分析/生成笔记，或用户提供本地视频文件路径。
+description: B站视频内容分析与笔记生成工具。**优先使用 bili video --ai 获取 AI 摘要（秒级完成）**，如需详细图文笔记才进行帧提取分析。支持本地视频文件分析。触发条件：用户提供B站视频BV号或链接并要求分析/生成笔记，或用户提供本地视频文件路径。
 type: skill
 agent_created: true
-version: 2.0
+version: 3.0
 original_skill: bilibili-analyzer
 ---
 
-# Bilibili Video Notes Skill（原 bilibili-analyzer 改进版）
+# Bilibili Video Notes Skill v3.0
 
-基于原 bilibili-analyzer skill 的优化版本，解决了原版在长视频分析中的性能问题和输出限制问题。
+基于原 bilibili-analyzer 的优化版本，**v3.0 新增优先使用 bili-cli 获取 AI 摘要**。
 
-## 改进点对比
+## v3.0 核心改进
 
-| 特性 | 原 bilibili-analyzer | 本版本（v2.0） |
-|------|---------------------|---------------|
-| 下载方式 | .NET prepare.cs | **优先 .NET，退到 yt-dlp** |
-| 帧数控制 | 全量提取（fps参数） | **智能采样（最多120帧）** |
-| 去重方式 | 相邻帧 PSNR/SSIM | **场景变化检测 + 相似帧去重** |
-| 分析方式 | 5 Agent 并行 | **单线程 Python（稳定）** |
-| 输出限制 | Agent输出超32MB截断 | **逐帧JSON输出（无截断）** |
-| 图片读取 | Read工具（不稳定） | **Vision API 直接调用** |
-| 本地视频 | ❌ 不支持 | **✓ 支持（跳过下载）** |
+### 优先使用 bili-cli AI 摘要（秒级完成）
+
+```bash
+# 首选方式：直接获取 B站 AI 摘要（< 1秒）
+bili video BV1xx --ai
+```
+
+**优势**：
+- 速度：从 47~442秒 → **< 1秒**
+- 内容：直接获取 B站官方 AI 生成的摘要
+- 同时获取视频元数据（标题、时长、播放量等）
+
+### 工作流程优先级
+
+```
+Step 1: bili video --ai      → 获取 AI 摘要（首选）
+        ↓ 失败或需要图文
+Step 2: bili video --subtitle → 获取字幕文本（如有）
+        ↓ 失败或需要图文
+Step 3: 帧提取 + Vision API  → 详细图文笔记（备选）
+```
+
+## 版本对比
+
+| 特性 | v1.0 (原版) | v2.0 | **v3.0** |
+|------|------------|------|----------|
+| 获取摘要 | 逐帧 OCR | 逐帧 OCR | **bili --ai（秒级）** |
+| 获取字幕 | ❌ | ❌ | **bili --subtitle** |
+| 下载方式 | .NET | .NET/yt-dlp | **bili/yt-dlp** |
+| 帧数控制 | 全量 | 智能采样 | 智能采样 |
+| 分析方式 | 5 Agent 并行 | 单线程 | **优先 bili-cli** |
 
 ## 核心改进
 
@@ -118,29 +140,38 @@ pip install requests pillow
 
 ## 使用方式
 
+### 方式1：首选 - 使用 bili-cli 获取 AI 摘要（推荐）
+
 ```bash
-# 方式1：通过 skill 调用（B站在线视频）
-/skill bilibili-video-notes BV1xx411c7mD
+# 直接获取 B站 AI 摘要（秒级完成）
+bili video BV1xx411c7mD --ai
 
-# 方式2：分析本地视频文件
-/skill bilibili-video-notes --video ./my_video.mp4
+# 同时获取字幕（如有）
+bili video BV1xx411c7mD --subtitle
 
-# 方式3：直接运行 Python 脚本
-# 从 B站下载并分析
+# 获取视频元数据
+bili video BV1xx411c7mD --json
+```
+
+**适用场景**：快速了解视频内容，获取官方 AI 摘要
+
+### 方式2：详细图文笔记（需要帧分析时）
+
+```bash
+# 通过 skill 调用帧分析
+/skill bilibili-video-notes BV1xx411c7mD --frames
+
+# 或直接运行 Python 脚本
 python scripts/analyze.py BV1xx411c7mD -o ./output
+```
 
-# 从本地视频分析（自动从文件名推断标题）
-python scripts/analyze.py --video ./Codex教程.mp4 -o ./output
+**适用场景**：需要图文并茂的详细笔记、教程类视频、实操步骤记录
 
-# 从本地视频分析（指定标题）
-python scripts/analyze.py --video ./video.mp4 --title "Python入门教程" -o ./output
+### 方式3：本地视频分析
 
-# 控制分析帧数
-python scripts/analyze.py --video ./long_video.mp4 -f 60 -o ./output
-
-# 方式4：手动分步执行（高级）
-dotnet run scripts/prepare.cs "https://www.bilibili.com/video/BV1xx" -o ./output --scene-detect
-python scripts/analyze.py --video ./output/BV1xx/video.mp4 --no-download
+```bash
+/skill bilibili-video-notes --video ./my_video.mp4
+python scripts/analyze.py --video ./video.mp4 --title "标题" -o ./output
 ```
 
 ## 参数说明
