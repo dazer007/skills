@@ -44,6 +44,14 @@ Agent skills collection - 技能生态通用。
 npx skills add dazer007/skills@xjtu-doctor-scraper
 npx skills add dazer007/skills  --skil xjtu-doctor-scraper  #等价命令，自动从仓库目录中寻找
     skills add dazer007/skills  --skil env-backup  #等价命令，不需要npx,执行执行
+
+# 查看仓库所有可用技能
+npx skills add dazer007/skills --list
+
+# 安装指定技能
+npx skills add dazer007/skills --skill jira-v7-weekly
+npx skills add dazer007/skills --skill env-backup
+
 # Target a specific agent 指定一个agent代理，写入：~/.claude-code/
 npx skills add jackwener/bilibili-cli -a claude-code
 
