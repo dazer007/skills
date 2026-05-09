@@ -21,6 +21,7 @@ Agent skills collection - 技能生态通用。
 | [env-backup](./env-backup) | 环境变量备份与恢复工具，支持 Windows/Linux/Mac，记录变更历史、快速恢复、对比差异 |
 | [summarize-config](./summarize-config) | 配置 [summarize CLI](https://summarize.sh/) 工具，交互式配置向导、自动验证修复、多代理切换 |
 | [bilibili-video-notes](./bilibili-video-notes) | B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。智能下载、场景采样、AI分析、生成图文笔记。**支持本地视频文件分析**。依赖插件：bilibili-cli、bilibili-analyzer |
+| [neu-jira-weekly](./neu-jira-weekly) | 东软Jira工作周报生成器。从Jira Server拉取任务数据，按项目现场分组自动生成周报。每次需提供账号密码（不存储凭证） |
 
 ## Installed Skills
 
