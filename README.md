@@ -20,6 +20,8 @@ Agent skills collection - 技能生态通用。
 | [xjtu-doctor-scraper](./xjtu-doctor-scraper) | 爬取西安交通大学第一附属医院官网医生列表 |
 | [env-backup](./env-backup) | 环境变量备份与恢复工具，支持 Windows/Linux/Mac，记录变更历史、快速恢复、对比差异 |
 | [summarize-config](./summarize-config) | 配置 [summarize CLI](https://summarize.sh/) 工具，交互式配置向导、自动验证修复、多代理切换 |
+| [bilibili-video-notes](./bilibili-video-notes) | B站视频内容分析与笔记生成工具（原 bilibili-analyzer 改进版）。智能下载、场景采样、AI分析、生成图文笔记。**支持本地视频文件分析**。依赖插件：bilibili-cli、bilibili-analyzer |
+| [neu-jira-weekly](./neu-jira-weekly) | 东软Jira工作周报生成器。从Jira Server拉取任务数据，按项目现场分组自动生成周报。每次需提供账号密码（不存储凭证） |
 
 ## Installed Skills
 
@@ -39,9 +41,9 @@ Agent skills collection - 技能生态通用。
 
 ```bash
 # Claude Code / OpenClaw 通用安装命令
-npx skills add dazer007/my-skills@xjtu-doctor-scraper
-npx skills add dazer007/my-skills  --skil xjtu-doctor-scraper  #等价命令，自动从仓库目录中寻找
-    skills add dazer007/my-skills  --skil env-backup  #等价命令，不需要npx,执行执行
+npx skills add dazer007/skills@xjtu-doctor-scraper
+npx skills add dazer007/skills  --skil xjtu-doctor-scraper  #等价命令，自动从仓库目录中寻找
+    skills add dazer007/skills  --skil env-backup  #等价命令，不需要npx,执行执行
 # Target a specific agent 指定一个agent代理，写入：~/.claude-code/
 npx skills add jackwener/bilibili-cli -a claude-code
 
@@ -54,9 +56,9 @@ npx skills add https://github.com/aidotnet/moyucode      --skill bilibili-analyz
 npx skills add https://github.com/github/awesome-copilot --skill gh-cli
 
 # 或手动克隆安装
-git clone https://github.com/dazer007/my-skills.git
-cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/   # Claude Code
-cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # OpenClaw
+git clone https://github.com/dazer007/skills.git
+cp -r skills/xjtu-doctor-scraper ~/.claude/skills/   # Claude Code
+cp -r skills/xjtu-doctor-scraper ~/.openclaw/skills/ # OpenClaw
 ```
 
 ### 国内用户加速
@@ -68,7 +70,7 @@ cp -r my-skills/xjtu-doctor-scraper ~/.openclaw/skills/ # OpenClaw
 git config --global url.https://ghfast.top/https://github.com/.insteadof https://github.com/
 
 # 然后正常使用npx安装
-npx skills add dazer007/my-skills@xjtu-doctor-scraper
+npx skills add dazer007/skills@xjtu-doctor-scraper
 
 # 安装后可取消代理（可选）
 git config --global --unset url.https://ghfast.top/https://github.com/.insteadof
@@ -77,13 +79,13 @@ git config --global --unset url.https://ghfast.top/https://github.com/.insteadof
 或手动克隆：
 
 ```bash
-git clone https://ghfast.top/https://github.com/dazer007/my-skills.git
-cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
+git clone https://ghfast.top/https://github.com/dazer007/skills.git
+cp -r skills/xjtu-doctor-scraper ~/.claude/skills/
 ```
 
 网络实在不行？灵活处理：
 
-- **手工下载ZIP**: 浏览器打开 https://ghfast.top/https://github.com/dazer007/my-skills/archive/refs/heads/master.zip ，解压后复制技能目录
+- **手工下载ZIP**: 浏览器打开 https://ghfast.top/https://github.com/dazer007/skills/archive/refs/heads/master.zip ，解压后复制技能目录
 - **从国内生态复制**: 访问 skillhub.cn / clawhub.ai 搜索同名技能，直接一键安装
 
 ## Discover More Skills
@@ -110,10 +112,10 @@ cp -r my-skills/xjtu-doctor-scraper ~/.claude/skills/
 
 ```bash
 # 原始URL
-git clone https://github.com/dazer007/my-skills.git
+git clone https://github.com/dazer007/skills.git
 
 # 使用代理
-git clone https://ghfast.top/https://github.com/dazer007/my-skills.git
+git clone https://ghfast.top/https://github.com/dazer007/skills.git
 ```
 
 ### 推送私有仓库
@@ -142,9 +144,9 @@ git remote set-url origin https://github.com/用户名/仓库名.git
 **3. 一行命令推送**
 
 ```bash
-git remote set-url origin https://dazer007:ghp_xxx@ghfast.top/https://github.com/dazer007/my-skills.git && \
+git remote set-url origin https://dazer007:ghp_xxx@ghfast.top/https://github.com/dazer007/skills.git && \
 git push && \
-git remote set-url origin https://github.com/dazer007/my-skills.git
+git remote set-url origin https://github.com/dazer007/skills.git
 ```
 
 ### 注意事项

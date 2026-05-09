@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-Bilibili Video Notes Generator v2.0
-原 bilibili-analyzer 改进版 - 智能采样、单线程分析
+Bilibili Video Notes Generator v3.0
+优先使用 bili-cli 获取 AI 摘要，失败时退到帧分析
 
 改进点：
-1. 优先使用 .NET prepare.cs，环境不满足退到 yt-dlp
-2. 智能采样：场景变化检测 + 相似帧去重
-3. 单线程分析：避免 Agent 输出超限
-4. 支持本地视频文件：直接分析已下载的视频
+1. v3.0: 优先使用 bili video --ai 获取摘要（秒级完成）
+2. v3.0: 支持 bili video --subtitle 获取字幕
+3. v2.0: 智能采样：场景变化检测 + 相似帧去重
+4. v2.0: 单线程分析：避免 Agent 输出超限
+5. v2.0: 支持本地视频文件：直接分析已下载的视频
 
 Usage:
-    # 从 B站 BV号下载并分析
-    python analyze.py BV1xx411c7mD -o ./output
+    # 首选：使用 bili-cli 获取 AI 摘要（秒级）
+    bili video BV1xx411c7mD --ai
 
-    # 从本地视频文件分析（跳过下载）
-    python analyze.py --video ./local_video.mp4 -o ./output --title "我的教程"
+    # 备选：帧分析生成图文笔记
+    python analyze.py BV1xx411c7mD -o ./output --frames
 
-    # 从本地视频分析（自动从文件名推断标题）
-    python analyze.py --video ./Codex教程.mp4 -o ./output
+    # 本地视频分析
+    python analyze.py --video ./local_video.mp4 -o ./output
 """
 
 import argparse
@@ -36,6 +37,114 @@ try:
 except ImportError:
     print("请安装 requests: pip install requests")
     sys.exit(1)
+
+
+class BiliCliFetcher:
+    """使用 bili-cli 获取视频信息（优先方式）"""
+
+    @staticmethod
+    def check_bili_cli() -> bool:
+        """检测 bili 命令是否可用"""
+        try:
+            result = subprocess.run(
+                ["bili", "--help"],
+                capture_output=True, text=True, timeout=5,
+                encoding='utf-8', errors='ignore'
+            )
+            return result.returncode == 0
+        except:
+            return False
+
+    @staticmethod
+    def get_video_info(bvid: str) -> Optional[Dict]:
+        """使用 bili video --ai 获取视频信息和 AI 摘要"""
+        try:
+            result = subprocess.run(
+                ["bili", "video", bvid, "--ai", "--json"],
+                capture_output=True, text=True, timeout=30,
+                encoding='utf-8', errors='ignore'
+            )
+            if result.returncode == 0:
+                # 解析 YAML/JSON 输出
+                data = BiliCliFetcher._parse_bili_output(result.stdout, bvid)
+                return data
+        except Exception as e:
+            print(f"bili-cli 获取失败: {str(e)[:50]}")
+        return None
+
+    @staticmethod
+    def get_subtitle(bvid: str) -> Optional[str]:
+        """使用 bili video --subtitle 获取字幕"""
+        try:
+            result = subprocess.run(
+                ["bili", "video", bvid, "--subtitle"],
+                capture_output=True, text=True, timeout=30,
+                encoding='utf-8', errors='ignore'
+            )
+            if result.returncode == 0:
+                # 解析字幕文本
+                return BiliCliFetcher._extract_subtitle(result.stdout)
+        except:
+            pass
+        return None
+
+    @staticmethod
+    def _parse_bili_output(output: str, bvid: str) -> Dict:
+        """解析 bili 命令输出（JSON 格式）"""
+        data = {
+            "title": "",
+            "author": "",
+            "duration": 0,
+            "view_count": 0,
+            "url": f"https://www.bilibili.com/video/{bvid}",
+            "ai_summary": "",
+            "subtitle": "",
+        }
+
+        try:
+            # 尝试解析 JSON
+            json_data = json.loads(output)
+            if json_data.get("ok") and "data" in json_data:
+                video = json_data["data"].get("video", {})
+                data["title"] = video.get("title", "")
+                data["author"] = video.get("owner", {}).get("name", "")
+                data["duration"] = video.get("duration_seconds", 0)
+                data["view_count"] = video.get("stats", {}).get("view", 0)
+                data["url"] = video.get("url", data["url"])
+                data["ai_summary"] = json_data["data"].get("ai_summary", "")
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        # 备用：YAML 格式解析
+        lines = output.split('\n')
+        for line in lines:
+            if line.startswith('title:'):
+                data["title"] = line.split(':', 1)[1].strip().strip("'")
+            elif 'name:' in line and 'owner' not in line:
+                data["author"] = line.split('name:')[1].strip().strip("'")
+            elif line.startswith('duration_seconds:'):
+                data["duration"] = int(line.split(':')[1].strip())
+            elif 'view:' in line:
+                data["view_count"] = int(line.split('view:')[1].strip())
+            elif line.startswith('ai_summary:'):
+                data["ai_summary"] = line.split(':', 1)[1].strip()
+
+        return data
+
+    @staticmethod
+    def _extract_subtitle(output: str) -> str:
+        """从 bili 输出提取字幕文本"""
+        # 提取 subtitle items
+        text_lines = []
+        in_subtitle = False
+        for line in output.split('\n'):
+            if 'subtitle:' in line or 'items:' in line:
+                in_subtitle = True
+            elif in_subtitle and line.strip().startswith('text:'):
+                text = line.split('text:')[1].strip().strip("'")
+                text_lines.append(text)
+        return '\n'.join(text_lines)
 
 
 class VideoInfoExtractor:
@@ -219,20 +328,31 @@ class BilibiliAnalyzer:
 
     # Vision API 配置
     API_CONFIG = {
+        "zhipu": {
+            "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "model": "glm-ocr",  # GLM-OCR 专用模型
+            "header_format": "bearer",
+            "content_format": "openai",
+        },
         "dashscope": {
             "url": "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1/messages",
             "model": "glm-5",
+            "header_format": "anthropic",
+            "content_format": "anthropic",
         },
         "anthropic": {
             "url": "https://api.anthropic.com/v1/messages",
             "model": "claude-sonnet-4-20250514",
+            "header_format": "anthropic",
+            "content_format": "anthropic",
         },
     }
 
     def __init__(self, bvid: str = None, output_dir: str = "./output",
                  local_video: str = None, video_title: str = None,
                  max_frames: int = None, scene_threshold: float = None,
-                 similarity_threshold: float = 0.80):
+                 similarity_threshold: float = 0.80,
+                 ai_reference: str = None):
         """
         初始化分析器
 
@@ -244,6 +364,7 @@ class BilibiliAnalyzer:
             max_frames: 最大帧数
             scene_threshold: 场景变化阈值
             similarity_threshold: 相似帧去重阈值
+            ai_reference: AI 摘要参考内容
         """
         # 本地视频模式
         self.local_video_path = None
@@ -278,6 +399,7 @@ class BilibiliAnalyzer:
         self.similarity_threshold = similarity_threshold
 
         self.video_info = {}
+        self.ai_reference = ai_reference or ""
         self.frame_analysis = []
         self.api_key = None
         self.api_type = None
@@ -318,11 +440,21 @@ class BilibiliAnalyzer:
         if config_path.exists():
             config = json.loads(config_path.read_text())
             if "apiKeys" in config:
+                # 优先使用 zhipu (glm-4v-flash, 速度快)
+                if config["apiKeys"].get("zhipu"):
+                    self.api_key = config["apiKeys"]["zhipu"]
+                    self.api_type = "zhipu"
+                    return True
                 if config["apiKeys"].get("anthropic"):
                     self.api_key = config["apiKeys"]["anthropic"]
                     self.api_type = "dashscope"
                     return True
 
+        # 环境变量
+        if os.environ.get("ZHIPU_API_KEY"):
+            self.api_key = os.environ["ZHIPU_API_KEY"]
+            self.api_type = "zhipu"
+            return True
         if os.environ.get("ANTHROPIC_API_KEY"):
             self.api_key = os.environ["ANTHROPIC_API_KEY"]
             self.api_type = "anthropic"
@@ -700,54 +832,79 @@ class BilibiliAnalyzer:
             image_data = base64.standard_b64encode(f.read()).decode()
 
         api_config = self.API_CONFIG[self.api_type]
+        header_format = api_config.get("header_format", "anthropic")
+        content_format = api_config.get("content_format", "anthropic")
 
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-        }
+        # 根据 header_format 构建 headers
+        if header_format == "bearer":
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+        else:
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+            }
 
-        prompt = f"""分析这张视频截图（时间: {timestamp//60}分{timestamp%60}秒），返回JSON格式：
-{{
-    "scene_type": "代码编辑器/终端/浏览器/PPT/演示/其他",
-    "title": "当前演示的标题或主题（简短）",
-    "key_text": "屏幕上的关键文字内容（代码、命令、配置等）",
-    "action": "正在演示的操作",
-    "code_snippets": ["如果有代码，完整转录"],
-    "config_items": {"如果有配置项，记录键值"},
-    "notes": "重要说明或注意事项"
-}}
-只返回JSON，不要其他内容。"""
+        prompt = """请识别图片中所有文字内容，逐行输出。
+然后总结一个简短标题（10字以内）作为主要内容概括。
+格式：【标题】xxx
+内容：逐行文字"""
 
-        payload = {
-            "model": api_config["model"],
-            "max_tokens": 800,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {
-                        "type": "base64",
-                        "media_type": "image/jpeg",
-                        "data": image_data
-                    }},
-                    {"type": "text", "text": prompt}
-                ]
-            }]
-        }
+        # 根据 content_format 构建消息内容
+        if content_format == "openai":
+            content = [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+                {"type": "text", "text": prompt}
+            ]
+            payload = {
+                "model": api_config["model"],
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": content}]
+            }
+        else:
+            content = [
+                {"type": "image", "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": image_data
+                }},
+                {"type": "text", "text": prompt}
+            ]
+            payload = {
+                "model": api_config["model"],
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": content}]
+            }
 
         resp = requests.post(api_config["url"], headers=headers, json=payload, timeout=90)
         result = resp.json()
 
-        if "content" in result:
-            for item in result["content"]:
-                if item.get("type") == "text":
-                    text = item["text"]
-                    try:
-                        json_match = re.search(r'\{[\s\S]*\}', text)
-                        if json_match:
-                            return json.loads(json_match.group())
-                    except:
-                        return {"raw_text": text, "scene_type": "其他"}
+        # 解析响应 - GLM-OCR 返回纯文本格式
+        if content_format == "openai":
+            text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            text = ""
+            if "content" in result:
+                for item in result["content"]:
+                    if item.get("type") == "text":
+                        text = item["text"]
+                        break
+
+        if text:
+            # 从 OCR 文本提取标题和内容
+            title_match = re.search(r'【标题】\s*(.+)', text)
+            title = title_match.group(1).strip()[:20] if title_match else "未知内容"
+            content_match = re.search(r'内容[：:]\s*(.+)', text)
+            content = content_match.group(1).strip() if content_match else text
+            return {
+                "title": title,
+                "key_text": content,
+                "raw_text": text,
+                "scene_type": "其他"
+            }
 
         return None
 
@@ -790,6 +947,11 @@ class BilibiliAnalyzer:
         if self.frame_analysis:
             first = self.frame_analysis[0]
             lines.append(f"![{first['frame']}: 视频开始](./images/{first['frame']}.jpg)\n\n")
+
+        # AI 摘要参考（如有）
+        if self.ai_reference:
+            lines.append("**AI 内容摘要（参考）**：\n\n")
+            lines.append(f"{self.ai_reference}\n\n")
 
         if description:
             lines.append(f"**视频简介**：{description[:300]}\n\n")
@@ -842,7 +1004,7 @@ class BilibiliAnalyzer:
     def run(self) -> Optional[Path]:
         """完整运行流程"""
         print(f"\n{'='*60}")
-        print(f"Bilibili Video Notes Generator v2.0")
+        print(f"Bilibili Video Notes Generator v3.0")
 
         if self.is_local_mode:
             print(f"模式: 本地视频分析")
@@ -905,21 +1067,21 @@ class BilibiliAnalyzer:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="B站视频笔记生成器 v2.0（支持本地视频）",
+        description="B站视频笔记生成器 v3.0（优先使用 bili-cli）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例用法:
-  # 从 B站下载并分析
-  python analyze.py BV1xx411c7mD -o ./output
+  # 首选：使用 bili-cli 快速获取 AI 摘要（推荐）
+  bili video BV1xx411c7mD --ai
 
-  # 从本地视频分析
+  # 或使用本脚本的快速模式
+  python analyze.py BV1xx411c7mD --quick
+
+  # 详细图文笔记（帧分析）
+  python analyze.py BV1xx411c7mD --frames -o ./output
+
+  # 本地视频分析
   python analyze.py --video ./my_video.mp4 -o ./output
-
-  # 指定标题
-  python analyze.py --video ./my_video.mp4 --title "Python教程" -o ./output
-
-  # 控制帧数
-  python analyze.py --video ./long_video.mp4 -f 60 -o ./output
 """
     )
 
@@ -934,31 +1096,67 @@ def main():
     # 本地视频专用参数
     parser.add_argument("--title", "-t", help="视频标题（用于本地视频）")
 
+    # 模式选择
+    parser.add_argument("--quick", "-q", action="store_true",
+                        help="快速模式：优先使用 bili-cli 获取 AI 摘要（秒级完成）")
+    parser.add_argument("--frames", action="store_true",
+                        help="帧分析模式：提取关键帧生成图文笔记")
+
     # 分析参数
-    parser.add_argument("-f", "--frames", type=int, default=None, help="最大帧数")
-    parser.add_argument("--scene-threshold", type=float, default=None, help="场景变化阈值(0.1-0.5)")
+    parser.add_argument("-f", "--max-frames", type=int, default=60, help="最大帧数")
+    parser.add_argument("--scene-threshold", type=float, default=0.3, help="场景变化阈值(0.1-0.5)")
     parser.add_argument("--similarity", type=float, default=0.80, help="相似帧去重阈值")
 
     # 控制参数
-    parser.add_argument("--no-download", action="store_true", help="跳过下载（仅用于B站模式，需已有video.mp4）")
+    parser.add_argument("--no-download", action="store_true", help="跳过下载")
     parser.add_argument("--no-dedup", action="store_true", help="跳过去重")
 
     args = parser.parse_args()
 
-    # 创建分析器
+    # 快速模式：先获取 AI 摘要作为参考，再进行帧分析
+    if args.quick and args.bvid and not args.video:
+        print(f"\n{'='*60}")
+        print("Bilibili Video Notes Generator v3.0")
+        print(f"{'='*60}\n")
+
+        # 获取 AI 摘要作为参考信息
+        ai_ref = ""
+        if BiliCliFetcher.check_bili_cli():
+            print("[预览] 使用 bili video --ai 获取摘要参考...")
+            data = BiliCliFetcher.get_video_info(args.bvid)
+
+            if data:
+                print(f"  标题: {data.get('title', '未知')}")
+                print(f"  作者: {data.get('author', '未知')}")
+                print(f"  时长: {data.get('duration', 0)//60}分{data.get('duration', 0)%60:02d}秒")
+
+                ai_summary = data.get("ai_summary", "")
+                if ai_summary and len(ai_summary) >= 30:
+                    print(f"\n  AI 摘要参考 ({len(ai_summary)}字):")
+                    print(f"  {ai_summary[:200]}{'...' if len(ai_summary) > 200 else ''}")
+                    ai_ref = ai_summary
+                else:
+                    print("  AI 摘要: 无或内容太少")
+
+        # 继续帧分析生成笔记
+        print(f"\n{'='*60}")
+        print("开始帧分析生成图文笔记...")
+        print(f"{'='*60}\n")
+
+    # 帧分析模式或快速模式失败
     analyzer = BilibiliAnalyzer(
         bvid=args.bvid,
         output_dir=args.output,
         local_video=args.video,
         video_title=args.title,
-        max_frames=args.frames,
+        max_frames=args.max_frames if args.frames else None,
         scene_threshold=args.scene_threshold,
-        similarity_threshold=args.similarity if not args.no_dedup else 1.0
+        similarity_threshold=args.similarity if not args.no_dedup else 1.0,
+        ai_reference=ai_ref  # AI 摘要作为参考
     )
 
-    # 运行
+    # 运行帧分析
     if args.no_download and not analyzer.is_local_mode:
-        # --no-download 仅用于 B站模式
         analyzer.output_dir.mkdir(parents=True, exist_ok=True)
         analyzer.get_video_info()
         analyzer.analyze_frames()
