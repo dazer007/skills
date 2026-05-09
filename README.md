@@ -63,7 +63,9 @@ cp -r skills/xjtu-doctor-scraper ~/.openclaw/skills/ # OpenClaw
 
 ### 国内用户加速
 
-如果 `npx skills add` 访问GitHub失败，配置git全局代理：
+如果 `npx skills add` 访问GitHub失败，有以下几种方案：
+
+#### 方案1：使用 git 全局代理
 
 ```bash
 # 配置git全局代理（使用ghfast.top）
@@ -76,7 +78,21 @@ npx skills add dazer007/skills@xjtu-doctor-scraper
 git config --global --unset url.https://ghfast.top/https://github.com/.insteadof
 ```
 
-或手动克隆：
+#### 方案2：从国内仓库安装（推荐）
+
+本仓库已支持 `.well-known/agent-skills/index.json` 标准，可直接从 Gitee、GitCode 等国内仓库安装：
+
+```bash
+# 从 Gitee 安装
+npx skills add https://gitee.com/{用户名}/skills --skill jira-v7-weekly
+
+# 从 GitCode 安装
+npx skills add https://gitcode.com/{用户名}/skills --skill jira-v7-weekly
+```
+
+> **注意**：国内仓库需同步此仓库并包含 `.well-known/agent-skills/index.json` 文件
+
+#### 方案3：手动克隆安装
 
 ```bash
 git clone https://ghfast.top/https://github.com/dazer007/skills.git
@@ -99,6 +115,48 @@ cp -r skills/xjtu-doctor-scraper ~/.claude/skills/
 | clawhub.ai | https://clawhub.ai |
 | skillhub.cn | https://skillhub.cn |
 | skillkit.io | https://skillkit.io |
+
+---
+
+## 国内仓库支持 skills 命令
+
+要让 Gitee、GitCode 等国内仓库支持 `npx skills add` 命令，需要添加 `.well-known/agent-skills/index.json` 文件。
+
+### index.json 格式
+
+```json
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "技能名称",
+      "type": "skill-md",
+      "description": "技能描述",
+      "url": "/技能目录/SKILL.md",
+      "digest": "sha256:文件SHA256校验值"
+    }
+  ]
+}
+```
+
+### 生成 digest
+
+```bash
+# 计算 SKILL.md 的 SHA-256
+sha256sum 技能目录/SKILL.md
+# 或
+openssl sha256 技能目录/SKILL.md
+```
+
+### 同步到国内仓库
+
+```bash
+# GitHub 推送后，同步到 Gitee
+git remote add gitee https://gitee.com/{用户名}/skills.git
+git push gitee master
+
+# 或使用 Gitee 的仓库导入功能
+```
 
 ---
 
